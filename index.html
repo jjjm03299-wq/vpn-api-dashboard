@@ -248,13 +248,25 @@
         let timerInterval = null;
         let secondsElapsed = 0;
 
-        // Register Service Worker with relative scope supporting GitHub Pages subpaths
+        // Register Service Worker and wait for it to control the page
         if ('serviceWorker' in navigator) {
             const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
             
             navigator.serviceWorker.register('./App.js', { scope: basePath + '/' })
-                .then((registration) => {
-                    logMessage(`Service Worker registered successfully with scope: ${registration.scope}`);
+                .then(async (registration) => {
+                    logMessage('Service Worker registered successfully.');
+
+                    // Wait for the service worker to become active and take control
+                    if (!navigator.serviceWorker.controller) {
+                        logMessage('Waiting for Service Worker activation...');
+                        await new Promise((resolve) => {
+                            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                                resolve();
+                            }, { once: true });
+                        });
+                    }
+
+                    logMessage('Service Worker is active and intercepting network traffic.');
                     fetchAppData();
                 })
                 .catch(err => logMessage('Service Worker registration failed: ' + err.message));
